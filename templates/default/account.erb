@@ -1,0 +1,51 @@
+#!/usr/bin/env php
+<?php
+
+$root = dirname(dirname(dirname(__FILE__)));
+require_once $root.'/scripts/__init_script__.php';
+
+$username = '<%= node['phabricator']['username'] %>';
+$user = new PhabricatorUser();
+$user->setUsername($username);
+$user->setRealName($username);
+$is_new = true;
+
+$email = $create_email = '<%= node['phabricator']['email'] %>';
+$changed_pass = $password = '<%= node['phabricator']['password'] %>';
+
+$is_system_agent = $user->getIsSystemAgent();
+$set_system_agent = true;
+
+$verify_email = null;
+$set_verified = false;
+
+$user->openTransaction();
+
+  $editor = new PhabricatorUserEditor();
+
+  // TODO: This is wrong, but we have a chicken-and-egg problem when you use
+  // this script to create the first user.
+  $editor->setActor($user);
+
+  if ($is_new) {
+    $email = id(new PhabricatorUserEmail())
+      ->setAddress($create_email)
+      ->setIsVerified(1);
+
+    $editor->createNewUser($user, $email);
+  } else {
+    if ($verify_email) {
+      $verify_email->setIsVerified($set_verified ? 1 : 0);
+    }
+    $editor->updateUser($user, $verify_email);
+  }
+
+  $editor->makeAdminUser($user, true);
+  $editor->makeSystemAgentUser($user, $set_system_agent);
+
+  if ($changed_pass !== false) {
+    $envelope = new PhutilOpaqueEnvelope($changed_pass);
+    $editor->changePassword($user, $envelope);
+  }
+
+$user->saveTransaction();
