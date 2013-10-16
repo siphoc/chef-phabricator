@@ -30,14 +30,21 @@ install_dir = node['phabricator']['install_dir']
 # phabricator dir, used too often, so create local variable
 phabricator_dir = "#{install_dir}/phabricator"
 
-bash "Download Phabricator and dependencies" do
+# checkout code
+packages = %w{phabricator libphutil arcanist}
+packages.each do |pkg|
+    git "#{install_dir}/#{pkg}" do
+        user install_user
+        repository "git://github.com/facebook/#{pkg}.git"
+        reference "master"
+        action :checkout
+    end
+end
+
+bash "Upgrade Phabricator storage" do
     user install_user
-    code <<-EOH
-        git clone git://github.com/facebook/phabricator.git #{install_dir}/phabricator
-        git clone git://github.com/facebook/libphutil.git #{install_dir}/libphutil
-        git clone git://github.com/facebook/arcanist.git #{install_dir}/arcanist
-        cd #{phabricator_dir} && ./bin/storage upgrade --force
-    EOH
+    cwd phabricator_dir
+    code "./bin/storage upgrade --force"
 end
 
 # Install custom script to easily install an admin.
