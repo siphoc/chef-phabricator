@@ -1,7 +1,7 @@
 server {
   server_name <%= node['phabricator']['domain'] %>;
 
-  root /home/vagrant/phabricator/webroot;
+  root <%= @phabricator_dir %>/webroot;
   try_files $uri $uri/ /index.php;
 
   location / {

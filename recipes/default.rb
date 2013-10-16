@@ -23,45 +23,54 @@
 ## THE SOFTWARE.
 ##
 
+# user to own the checked out files
+install_user = node['phabricator']['user']
+# dir where phabricator and deps are installed
+install_dir = node['phabricator']['install_dir']
+# phabricator dir, used too often, so create local variable
+phabricator_dir = "#{install_dir}/phabricator"
+
 bash "Download Phabricator and dependencies" do
-    user "vagrant"
+    user install_user
     code <<-EOH
-        git clone git://github.com/facebook/phabricator.git /home/vagrant/phabricator
-        git clone git://github.com/facebook/libphutil.git /home/vagrant/libphutil
-        git clone git://github.com/facebook/arcanist.git /home/vagrant/arcanist
-        cd /home/vagrant/phabricator && ./bin/storage upgrade --force
+        git clone git://github.com/facebook/phabricator.git #{install_dir}/phabricator
+        git clone git://github.com/facebook/libphutil.git #{install_dir}/libphutil
+        git clone git://github.com/facebook/arcanist.git #{install_dir}/arcanist
+        cd #{phabricator_dir} && ./bin/storage upgrade --force
     EOH
 end
 
 # Install custom script to easily install an admin.
-template "/home/vagrant/phabricator/scripts/user/admin.php" do
+template "#{phabricator_dir}/scripts/user/admin.php" do
     source "account.erb"
     mode 0777
 end
 
 bash "Install admin account" do
-    user "vagrant"
+    user install_user
     code <<-EOH
-        cd /home/vagrant/phabricator/scripts/user && ./admin.php
+        cd #{phabricator_dir}/scripts/user && ./admin.php
     EOH
 end
 
 bash "Remove admin script" do
-    user "vagrant"
+    user install_user
     code <<-EOH
-        rm /home/vagrant/phabricator/scripts/user/admin.php
+        rm #{phabricator_dir}/scripts/user/admin.php
     EOH
 end
 
 # Set the phabricator config.
-template "/home/vagrant/phabricator/conf/custom.conf.php" do
+template "#{phabricator_dir}/conf/custom.conf.php" do
     source "phabricator-config.erb"
-    mode 0777
+    user install_user
+    mode 0644
 end
 
 # Set nginx dependencies.
 template "/etc/nginx/sites-available/phabricator" do
     source "nginx.erb"
+    variables ({ :phabricator_dir => phabricator_dir })
     mode 0644
 end
 
