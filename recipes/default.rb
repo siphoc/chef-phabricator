@@ -46,6 +46,20 @@ packages.each do |pkg|
     end
 end
 
+bash "Configure Phabricator" do
+    creates "#{phabricator_dir}/conf/local/local.json"
+    user install_user
+    cwd phabricator_dir
+    mysql = node['phabricator']['mysql']
+    code <<-EOH
+        ./bin/config set mysql.host '#{mysql.host}'
+        ./bin/config set mysql.port '#{mysql.port}'
+        ./bin/config set mysql.user '#{mysql.user}'
+        ./bin/config set mysql.pass '#{mysql.pass}'
+    EOH
+    notifies :run, "bash[Upgrade Phabricator storage]", :immediately
+end
+
 bash "Upgrade Phabricator storage" do
     user install_user
     cwd phabricator_dir
@@ -55,7 +69,8 @@ end
 # Install custom script to easily install an admin.
 template "#{phabricator_dir}/scripts/user/admin.php" do
     source "account.erb"
-    mode 0777
+    user install_user
+    mode 0755
 end
 
 bash "Install admin account" do
