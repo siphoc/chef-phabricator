@@ -105,10 +105,9 @@ template "/etc/nginx/sites-available/phabricator" do
     mode 0644
 end
 
-bash "Enable Phabricator for nginx" do
-    code <<-EOH
-        sudo ln -sf /etc/nginx/sites-available/phabricator /etc/nginx/sites-enabled/phabricator
-    EOH
+link "Enable Phabricator for nginx" do
+    to "../sites-available/phabricator"
+    target_file "/etc/nginx/sites-enabled/phabricator"
 end
 
 service "nginx" do
