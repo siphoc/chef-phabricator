@@ -17,7 +17,10 @@ default['phabricator']['nginx']['service'] = 'nginx'
 # mysql connection params
 default['phabricator']['mysql']['host'] = 'localhost'
 default['phabricator']['mysql']['port'] = 3306
-default['phabricator']['mysql']['user'] = 'root'
+default['phabricator']['mysql']['user'] = value_for_platform_family(
+	"pld" => 'mysql',
+	"default" => 'root',
+)
 default['phabricator']['mysql']['pass'] = ''
 
 # packages to install before proceeding, php, nginx, etc
