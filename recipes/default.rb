@@ -94,6 +94,10 @@ template "#{phabricator_dir}/conf/custom.conf.php" do
     mode 0644
 end
 
+# just to be sure dirs exist
+directory "/etc/nginx/sites-available"
+directory "/etc/nginx/sites-enabled"
+
 # Set nginx dependencies.
 template "/etc/nginx/sites-available/phabricator" do
     source "nginx.erb"
@@ -108,5 +112,6 @@ bash "Enable Phabricator for nginx" do
 end
 
 service "nginx" do
+    service_name node['phabricator']['nginx']['service']
     action :reload
 end

@@ -11,6 +11,9 @@ default['phabricator']['user'] = 'vagrant'
 # dir where phabricator and deps are installed
 default['phabricator']['install_dir'] = '/home/vagrant'
 
+# ngix service name, maybe different on platforms
+default['phabricator']['nginx']['service'] = 'nginx'
+
 # mysql connection params
 default['phabricator']['mysql']['host'] = 'localhost'
 default['phabricator']['mysql']['port'] = 3306
