@@ -10,3 +10,6 @@ default['phabricator']['full-domain'] = 'http://phabricator.dev:4567'
 default['phabricator']['user'] = 'vagrant'
 # dir where phabricator and deps are installed
 default['phabricator']['install_dir'] = '/home/vagrant'
+
+# packages to install before proceeding, php, nginx, etc
+default['phabricator']['packages'] = %w{}

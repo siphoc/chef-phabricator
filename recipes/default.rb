@@ -23,6 +23,11 @@
 ## THE SOFTWARE.
 ##
 
+# Install optional packages
+node['phabricator']['packages'].each do |pkg|
+    package pkg
+end
+
 # user to own the checked out files
 install_user = node['phabricator']['user']
 # dir where phabricator and deps are installed
