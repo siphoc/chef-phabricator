@@ -64,27 +64,31 @@ bash "Upgrade Phabricator storage" do
     user install_user
     cwd phabricator_dir
     code "./bin/storage upgrade --force"
+    action :nothing
+    notifies :create, "template[Create admin script]", :immediately
 end
 
-# Install custom script to easily install an admin.
-template "#{phabricator_dir}/scripts/user/admin.php" do
+# Install custom script to easily install an admin user
+template "Create admin script" do
+    path "#{phabricator_dir}/scripts/user/admin.php"
     source "account.erb"
     user install_user
     mode 0755
+    action :nothing
+    notifies :run, "bash[Install admin account]", :immediately
 end
 
 bash "Install admin account" do
     user install_user
-    code <<-EOH
-        cd #{phabricator_dir}/scripts/user && ./admin.php
-    EOH
+    cwd "#{phabricator_dir}/scripts/user"
+    code "./admin.php"
+    action :nothing
+    notifies :delete, "file[Remove admin script]", :immediately
 end
 
-bash "Remove admin script" do
-    user install_user
-    code <<-EOH
-        rm #{phabricator_dir}/scripts/user/admin.php
-    EOH
+file "Remove admin script" do
+    path "#{phabricator_dir}/scripts/user/admin.php"
+    action :nothing
 end
 
 # Set the phabricator config.
@@ -98,19 +102,22 @@ end
 directory "/etc/nginx/sites-available"
 directory "/etc/nginx/sites-enabled"
 
+# enable and start, will reload if symlink is created or config updated
+service "nginx" do
+    service_name node['phabricator']['nginx']['service']
+    action [:enable, :start]
+end
+
 # Set nginx dependencies.
 template "/etc/nginx/sites-available/phabricator" do
     source "nginx.erb"
     variables ({ :phabricator_dir => phabricator_dir })
     mode 0644
+    notifies :reload, "service[nginx]"
 end
 
 link "Enable Phabricator for nginx" do
     to "../sites-available/phabricator"
     target_file "/etc/nginx/sites-enabled/phabricator"
-end
-
-service "nginx" do
-    service_name node['phabricator']['nginx']['service']
-    action :reload
+    notifies :reload, "service[nginx]"
 end
