@@ -21,4 +21,10 @@ default['phabricator']['mysql']['user'] = 'root'
 default['phabricator']['mysql']['pass'] = ''
 
 # packages to install before proceeding, php, nginx, etc
-default['phabricator']['packages'] = %w{}
+# Platform specific packages
+case node['platform_family']
+when 'pld'
+  default['phabricator']['packages'] = %w{git-core php-program php-spl php-mysql php-json}
+else
+  default['phabricator']['packages'] = %w{}
+end
