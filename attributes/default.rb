@@ -27,7 +27,7 @@ default['phabricator']['mysql']['pass'] = ''
 # Platform specific packages
 case node['platform_family']
 when 'pld'
-  default['phabricator']['packages'] = %w{git-core php-program php-spl php-mysql php-json}
+  default['phabricator']['packages'] = %w{git-core php-program php-spl php-mysql php-json php-filter php-hash php-openssl php-mbstring php-iconv php-curl php-fileinfo php-pecl-APC php-gd}
 else
   default['phabricator']['packages'] = %w{}
 end
