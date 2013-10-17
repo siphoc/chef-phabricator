@@ -46,17 +46,12 @@ packages.each do |pkg|
     end
 end
 
-bash "Configure Phabricator" do
-    creates "#{phabricator_dir}/conf/local/local.json"
+template "Configure Phabricator" do
+    path "#{phabricator_dir}/conf/local/local.json"
+    source "local.json.erb"
     user install_user
-    cwd phabricator_dir
-    mysql = node['phabricator']['mysql']
-    code <<-EOH
-        ./bin/config set mysql.host '#{mysql.host}'
-        ./bin/config set mysql.port '#{mysql.port}'
-        ./bin/config set mysql.user '#{mysql.user}'
-        ./bin/config set mysql.pass '#{mysql.pass}'
-    EOH
+    mode 0644
+    variables ({ :config => node['phabricator']['config'] })
     notifies :run, "bash[Upgrade Phabricator storage]", :immediately
 end
 
@@ -89,13 +84,6 @@ end
 file "Remove admin script" do
     path "#{phabricator_dir}/scripts/user/admin.php"
     action :nothing
-end
-
-# Set the phabricator config.
-template "#{phabricator_dir}/conf/custom.conf.php" do
-    source "phabricator-config.erb"
-    user install_user
-    mode 0644
 end
 
 # just to be sure dirs exist
