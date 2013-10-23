@@ -23,54 +23,89 @@
 ## THE SOFTWARE.
 ##
 
-bash "Download Phabricator and dependencies" do
-    user "vagrant"
-    code <<-EOH
-        git clone git://github.com/facebook/phabricator.git /home/vagrant/phabricator
-        git clone git://github.com/facebook/libphutil.git /home/vagrant/libphutil
-        git clone git://github.com/facebook/arcanist.git /home/vagrant/arcanist
-        cd /home/vagrant/phabricator && ./bin/storage upgrade --force
-    EOH
+# Install optional packages
+node['phabricator']['packages'].each do |pkg|
+    package pkg
 end
 
-# Install custom script to easily install an admin.
-template "/home/vagrant/phabricator/scripts/user/admin.php" do
+# user to own the checked out files
+install_user = node['phabricator']['user']
+# dir where phabricator and deps are installed
+install_dir = node['phabricator']['install_dir']
+# phabricator dir, used too often, so create local variable
+phabricator_dir = "#{install_dir}/phabricator"
+
+# checkout code
+packages = %w{phabricator libphutil arcanist}
+packages.each do |pkg|
+    git "#{install_dir}/#{pkg}" do
+        user install_user
+        repository "git://github.com/facebook/#{pkg}.git"
+        reference "master"
+        action :checkout
+    end
+end
+
+template "Configure Phabricator" do
+    path "#{phabricator_dir}/conf/local/local.json"
+    source "local.json.erb"
+    user install_user
+    mode 0644
+    variables ({ :config => node['phabricator']['config'] })
+    notifies :run, "bash[Upgrade Phabricator storage]", :immediately
+end
+
+bash "Upgrade Phabricator storage" do
+    user install_user
+    cwd phabricator_dir
+    code "./bin/storage upgrade --force"
+    action :nothing
+    notifies :create, "template[Create admin script]", :immediately
+end
+
+# Install custom script to easily install an admin user
+template "Create admin script" do
+    path "#{phabricator_dir}/scripts/user/admin.php"
     source "account.erb"
-    mode 0777
+    user install_user
+    mode 0755
+    action :nothing
+    notifies :run, "bash[Install admin account]", :immediately
 end
 
 bash "Install admin account" do
-    user "vagrant"
-    code <<-EOH
-        cd /home/vagrant/phabricator/scripts/user && ./admin.php
-    EOH
+    user install_user
+    cwd "#{phabricator_dir}/scripts/user"
+    code "./admin.php"
+    action :nothing
+    notifies :delete, "file[Remove admin script]", :immediately
 end
 
-bash "Remove admin script" do
-    user "vagrant"
-    code <<-EOH
-        rm /home/vagrant/phabricator/scripts/user/admin.php
-    EOH
+file "Remove admin script" do
+    path "#{phabricator_dir}/scripts/user/admin.php"
+    action :nothing
 end
 
-# Set the phabricator config.
-template "/home/vagrant/phabricator/conf/custom.conf.php" do
-    source "phabricator-config.erb"
-    mode 0777
+# just to be sure dirs exist
+directory "/etc/nginx/sites-available"
+directory "/etc/nginx/sites-enabled"
+
+# enable and start, will reload if symlink is created or config updated
+service "nginx" do
+    service_name node['phabricator']['nginx']['service']
+    action [:enable, :start]
 end
 
 # Set nginx dependencies.
 template "/etc/nginx/sites-available/phabricator" do
     source "nginx.erb"
+    variables ({ :phabricator_dir => phabricator_dir })
     mode 0644
+    notifies :reload, "service[nginx]"
 end
 
-bash "Enable Phabricator for nginx" do
-    code <<-EOH
-        sudo ln -sf /etc/nginx/sites-available/phabricator /etc/nginx/sites-enabled/phabricator
-    EOH
-end
-
-service "nginx" do
-    action :reload
+link "Enable Phabricator for nginx" do
+    to "../sites-available/phabricator"
+    target_file "/etc/nginx/sites-enabled/phabricator"
+    notifies :reload, "service[nginx]"
 end
